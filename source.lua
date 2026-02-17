@@ -8,10 +8,12 @@
     3. Jalankan dengan perintah: tsu -c "lua solver.lua"
 ]]
 
-WinterConfig = {
-    ApiKey = "ISI_API_KEY_DISINI",  -- Masukkan API Key WinterCode Anda
-    PlaceId = 4483381587            -- ID Place Roblox (Default)
-}
+if not WinterConfig then
+    WinterConfig = {
+        ApiKey = "ISI_API_KEY_DISINI",  -- Masukkan API Key WinterCode Anda
+        PlaceId = 4483381587            -- ID Place Roblox (Default)
+    }
+end
 
 local function get_roblox_cookie(pkg_name)
     pkg_name = pkg_name or "com.roblox.client"
@@ -260,7 +262,6 @@ function check_captcha_status()
         elseif any_running then
             update_ui("MONITORING", "Scanning " .. #instances_data .. " packages...")
         else
-            update_ui("MONITORING", "Scanning " .. #instances_data .. " packages...")
             update_ui("IDLE", "Waiting for Roblox to open...")
         end
         
