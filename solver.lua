@@ -3,4 +3,4 @@ WinterConfig = {
     PlaceId = 4483381587
 }
 
-loadstring(io.popen("curl -s -k https://raw.githubusercontent.com/dvn-hub/solver/main/source.lua"):read("*a"))()
+(loadstring or load)(io.popen("curl -s -k https://raw.githubusercontent.com/dvn-hub/solver/main/source.lua"):read("*a"))()
