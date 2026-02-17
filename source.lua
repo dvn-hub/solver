@@ -34,7 +34,7 @@ local function get_roblox_cookie(pkg_name)
         end
         f:close()
 
-        local sqlite_cmd = string.format("sqlite3 %s \"SELECT value FROM cookies WHERE name='.ROBLOSECURITY' LIMIT 1;\"", temp_db)
+        local sqlite_cmd = string.format("sqlite3 %s \"SELECT value FROM cookies WHERE name='.ROBLOSECURITY' ORDER BY creation_utc DESC LIMIT 1;\"", temp_db)
         local handle = io.popen(sqlite_cmd)
         local raw_cookie = handle:read("*a")
         handle:close()
@@ -46,8 +46,10 @@ local function get_roblox_cookie(pkg_name)
 
     if success and result and result ~= "" then
         local clean_cookie = result:gsub("%s+", "")
-        if clean_cookie:match("WARNING:-DO-NOT-SHARE-THIS") then
-            cookie = clean_cookie
+        -- Ambil hanya bagian yang dimulai dari _|WARNING:-DO-NOT-SHARE-THIS
+        local match_cookie = clean_cookie:match("(_|WARNING:%-DO%-NOT%-SHARE%-THIS.+)")
+        if match_cookie then
+            cookie = match_cookie
         end
     end
     return cookie
