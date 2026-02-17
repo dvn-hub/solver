@@ -17,22 +17,36 @@ end
 
 local function get_roblox_cookie(pkg_name)
     pkg_name = pkg_name or "com.roblox.client"
+    
+    local s = os.execute("command -v sqlite3 > /dev/null")
+    if s ~= 0 and s ~= true then
+        os.execute("pkg install sqlite -y")
+    end
+
     local temp_db = "temp_cookie_" .. os.time() .. ".db"
     local cookie = nil
 
     -- Menggunakan pcall untuk memastikan file sementara selalu dihapus
     local success, result = pcall(function()
-        -- Salin db cookies ke folder lokal (membutuhkan akses root untuk membaca)
-        local copy_cmd = string.format("su -c 'cat /data/data/%s/app_webview/Default/Cookies' > %s 2>/dev/null", pkg_name, temp_db)
-        os.execute(copy_cmd)
-
-        -- Cek apakah file berhasil disalin dan tidak kosong
-        local f = io.open(temp_db, "r")
-        if not f or f:read(1) == nil then
+        local paths = {
+            "/data/data/" .. pkg_name .. "/app_webview/Default/Cookies",
+            "/data/data/" .. pkg_name .. "/app_webview/Cookies"
+        }
+        
+        local db_found = false
+        for _, path in ipairs(paths) do
+            local copy_cmd = string.format("su -c 'cat %s' > %s 2>/dev/null", path, temp_db)
+            os.execute(copy_cmd)
+            local f = io.open(temp_db, "r")
+            if f and f:seek("end") > 0 then
+                f:close()
+                db_found = true
+                break
+            end
             if f then f:close() end
-            return nil -- Keluar lebih awal jika penyalinan gagal
         end
-        f:close()
+        
+        if not db_found then return nil end
 
         local sqlite_cmd = string.format("sqlite3 %s \"SELECT value FROM cookies WHERE name='.ROBLOSECURITY' ORDER BY creation_utc DESC LIMIT 1;\"", temp_db)
         local handle = io.popen(sqlite_cmd)
