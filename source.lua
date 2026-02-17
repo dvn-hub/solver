@@ -4,7 +4,7 @@
     
     [ CARA PENGGUNAAN ]
     1. Masukkan API Key WinterCode Anda di bagian 'WinterConfig' di bawah.
-    2. Pastikan sudah install dependencies: pkg install tsu lua sqlite
+    2. Pastikan sudah install dependencies: pkg install tsu lua sqlite curl
     3. Jalankan dengan perintah: tsu -c "lua solver.lua"
 ]]
 
@@ -17,27 +17,40 @@ end
 
 local function get_roblox_cookie(pkg_name)
     pkg_name = pkg_name or "com.roblox.client"
-    
-    -- Menggunakan metode copy + sqlite3 untuk akurasi yang lebih baik
     local temp_db = "temp_cookie_" .. os.time() .. ".db"
-    
-    -- Salin db cookies ke folder lokal (membutuhkan akses root untuk membaca)
-    os.execute(string.format("su -c 'cat /data/data/%s/app_webview/Default/Cookies' > %s 2>/dev/null", pkg_name, temp_db))
-    
-    local cmd = string.format("sqlite3 %s \"SELECT value FROM cookies WHERE name='.ROBLOSECURITY' LIMIT 1;\"", temp_db)
-    local handle = io.popen(cmd)
-    local cookie = handle:read("*a")
-    handle:close()
-    
-    os.remove(temp_db)
+    local cookie = nil
 
-    if cookie and cookie ~= "" then
-        cookie = cookie:gsub("%s+", "")
-        if cookie:match("WARNING:-DO-NOT-SHARE-THIS") then
-            return cookie
+    -- Menggunakan pcall untuk memastikan file sementara selalu dihapus
+    local success, result = pcall(function()
+        -- Salin db cookies ke folder lokal (membutuhkan akses root untuk membaca)
+        local copy_cmd = string.format("su -c 'cat /data/data/%s/app_webview/Default/Cookies' > %s 2>/dev/null", pkg_name, temp_db)
+        os.execute(copy_cmd)
+
+        -- Cek apakah file berhasil disalin dan tidak kosong
+        local f = io.open(temp_db, "r")
+        if not f or f:read(1) == nil then
+            if f then f:close() end
+            return nil -- Keluar lebih awal jika penyalinan gagal
+        end
+        f:close()
+
+        local sqlite_cmd = string.format("sqlite3 %s \"SELECT value FROM cookies WHERE name='.ROBLOSECURITY' LIMIT 1;\"", temp_db)
+        local handle = io.popen(sqlite_cmd)
+        local raw_cookie = handle:read("*a")
+        handle:close()
+        return raw_cookie
+    end)
+
+    -- Selalu hapus file sementara setelah selesai
+    os.remove(temp_db) 
+
+    if success and result and result ~= "" then
+        local clean_cookie = result:gsub("%s+", "")
+        if clean_cookie:match("WARNING:-DO-NOT-SHARE-THIS") then
+            cookie = clean_cookie
         end
     end
-    return nil
+    return cookie
 end
 
 if WinterConfig.ApiKey == "ISI_API_KEY_DISINI" then
